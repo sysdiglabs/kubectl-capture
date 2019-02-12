@@ -1,0 +1,173 @@
+#!/bin/bash
+#
+# A kubectl plugin which starts a capture for a duration and uploads to a S3
+# bucket when is finished to troubleshoot it later with Sysdig Inspect
+
+
+pod=""
+duration="120"
+s3_bucket="${S3_BUCKET}"
+aws_access_key_id="${AWS_ACCESS_KEY_ID}"
+aws_secret_access_key="${AWS_SECRET_ACCESS_KEY}"
+
+function main() {
+  parse_arguments "$@"
+  create_job_for_sysdig_capture
+}
+
+function parse_arguments() {
+  local params=""
+  while [ $# -gt 0 ]
+  do
+    case $1 in
+      -d|--duration)
+        duration=$2
+        shift
+        ;;
+      --s3-bucket)
+        s3_bucket=$2
+        shift
+        ;;
+      --aws-access-key-id)
+        aws_access_key_id=$2
+        shift
+        ;;
+      --aws-secret-access-key)
+        aws_secret_access_key=$2
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        echo $0: $1: unrecognized option >&2
+        ;;
+      *)
+        params="$params $1"
+        ;;
+    esac
+    shift
+  done
+
+  eval set -- "$params"
+  pod="${1}"
+
+  if [[ -z "${pod}" ]]; then
+    usage_and_die 1
+  fi
+
+  if [[ -n "${s3_bucket}" ]] && [[ -z "${aws_access_key_id}" ]] && [[ -z "${aws_secret_access_key}" ]]; then
+    usage_and_die 1
+  fi
+}
+
+function usage_and_die() {
+  cat << 'EOF'
+Usage: kubectl sysdig-capture pod_name
+Options:
+  -d | --duration           Capture system calls for this duration (default: 120 seconds)
+  --s3-bucket               Uploads capture file to this AWS S3 Bucket (default: $S3_BUCKET)
+  --aws-access-key-id       AWS Access Key Id credential (default: $AWS_ACCESS_KEY_ID)
+  --aws-secret-access-key   AWS Secret Access Key credential (default: $AWS_SECRET_ACCESS_KEY)
+EOF
+  exit $1
+}
+
+function create_job_for_sysdig_capture() {
+  local now=$(date +%s)
+  local job="sysdig-capture-${now}-${pod}"
+
+  node=$(kubectl get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
+  if [[ $? -ne 0 ]];then
+    exit 1
+  fi
+
+  cat << EOF > sysdig-capture-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "${job}"
+spec:
+  template:
+    spec:
+      containers:
+      - name: capturer
+        image: sysdig/capturer
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        env:
+        - name: AWS_S3_BUCKET
+          value: ${s3_bucket}
+        - name: CAPTURE_DURATION
+          value: "${duration}"
+        - name: CAPTURE_FILE_NAME
+          value: ${job}
+        - name: AWS_ACCESS_KEY_ID
+          value: ${aws_access_key_id}
+        - name: AWS_SECRET_ACCESS_KEY
+          value: ${aws_secret_access_key}
+        volumeMounts:
+        - mountPath: /host/var/run/docker.sock
+          name: docker-socket
+        - mountPath: /host/dev
+          name: dev-fs
+        - mountPath: /host/proc
+          name: proc-fs
+          readOnly: true
+        - mountPath: /host/boot
+          name: boot-fs
+          readOnly: true
+        - mountPath: /host/lib/modules
+          name: lib-modules
+          readOnly: true
+        - mountPath: /host/usr
+          name: usr-fs
+          readOnly: true
+        - mountPath: /dev/shm
+          name: dshm
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+      - name: dev-fs
+        hostPath:
+          path: /dev
+      - name: proc-fs
+        hostPath:
+          path: /proc
+      - name: boot-fs
+        hostPath:
+          path: /boot
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: usr-fs
+        hostPath:
+          path: /usr
+      restartPolicy: Never
+      nodeName: ${node}
+EOF
+
+  kubectl apply -f sysdig-capture-job.yaml
+  rm sysdig-capture-job.yaml
+
+  echo ""
+  echo "Sysdig is starting to capture system calls in the node: ${node} where the pod: ${pod} is running"
+  if [[ -n "${s3_bucket}" ]]; then
+    echo "You can find the capture at: $s3_bucket${job}.scap.gz"
+  fi
+}
+
+main "$@"
