@@ -4,7 +4,7 @@
   kubectl create deployment nginx --image=nginx
   POD=`kubectl get pod | grep nginx | cut -f1 -d" "`
 
-  run ./kubectl-sysdig_capture $POD
+  run ./kubectl-sysdig_capture $POD -d 5
 
   kubectl delete deployment nginx
 
