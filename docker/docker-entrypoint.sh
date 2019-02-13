@@ -11,6 +11,7 @@ done
 
 /usr/bin/sysdig-probe-loader
 
+echo "* Capturing system calls"
 sysdig -S -M $CAPTURE_DURATION -pk -z -w /captures/$CAPTURE_FILE_NAME.scap.gz
 
 touch /captures/.finished
