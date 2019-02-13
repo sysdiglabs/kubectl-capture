@@ -53,10 +53,10 @@ to capture.
 
 There are a few parameters for this plugin:
 
-| Flag               | Description                                                   |
-|--------------------|---------------------------------------------------------------|
-| `-d | --duration`  | The duration in seconds that Sysdig is capturing system calls |
-| `-n | --namespace` | The namespace scope of the target Pod                         |
+| Flag                  | Description                                                   |
+|-----------------------|---------------------------------------------------------------|
+| `-d` or `--duration`  | The duration in seconds that Sysdig is capturing system calls |
+| `-n` or `--namespace` | The namespace scope of the target Pod                         |
 
 ## Cleanup
 
