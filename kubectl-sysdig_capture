@@ -5,6 +5,7 @@
 
 
 pod=""
+namespace="default"
 duration="120"
 
 function main() {
@@ -19,6 +20,10 @@ function parse_arguments() {
     case $1 in
       -d|--duration)
         duration=$2
+        shift
+        ;;
+      -n|--namespace)
+        namespace=$2
         shift
         ;;
       --)
@@ -48,6 +53,7 @@ function usage_and_die() {
 Usage: kubectl sysdig-capture pod_name
 Options:
   -d | --duration     Capture system calls for this duration (default: 120 seconds)
+  -n | --namespace    The namespace where the target pod lives (default: default)
 EOF
   exit $1
 }
@@ -56,7 +62,7 @@ function create_job_for_sysdig_capture() {
   local now=$(date +%s)
   local capture_pod="sysdig-capture-${now}-${pod}"
 
-  node=$(kubectl get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
+  node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
   if [[ $? -ne 0 ]];then
     exit 1
   fi
