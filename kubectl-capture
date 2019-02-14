@@ -10,7 +10,7 @@ duration="120"
 
 function main() {
   parse_arguments "$@"
-  create_job_for_sysdig_capture
+  start_capture
 }
 
 function parse_arguments() {
@@ -50,7 +50,7 @@ function parse_arguments() {
 
 function usage_and_die() {
   cat << 'EOF'
-Usage: kubectl sysdig-capture pod_name
+Usage: kubectl capture pod_name
 Options:
   -d | --duration     Capture system calls for this duration (default: 120 seconds)
   -n | --namespace    The namespace where the target pod lives (default: default)
@@ -58,16 +58,16 @@ EOF
   exit $1
 }
 
-function create_job_for_sysdig_capture() {
+function start_capture() {
   local now=$(date +%s)
-  local capture_pod="sysdig-capture-${now}-${pod}"
+  local capture_pod="capture-${now}-${pod}"
 
   node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
   if [[ $? -ne 0 ]];then
     exit 1
   fi
 
-  cat << EOF > sysdig-capture-pod.yaml
+  cat << EOF > capture-pod.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -134,8 +134,8 @@ spec:
   nodeName: ${node}
 EOF
 
-  kubectl apply -f sysdig-capture-pod.yaml > /dev/null 2>&1
-  rm sysdig-capture-pod.yaml
+  kubectl apply -f capture-pod.yaml > /dev/null 2>&1
+  rm capture-pod.yaml
 
   echo "Sysdig is starting to capture system calls. See details below:"
   echo ""

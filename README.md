@@ -10,7 +10,7 @@ duration of time and is download locally in order to use it with
 
 ## Installing
 
-In order to use this plugin, just copy the `kubectl-sysdig_capture` to your
+In order to use this plugin, just copy the `kubectl-capture` to your
 PATH, and ensure it has execution permissions.
 
 You can verify its installation using `kubectl`:
@@ -19,7 +19,7 @@ You can verify its installation using `kubectl`:
 $ kubectl plugin list
 The following kubectl-compatible plugins are available:
 
-/usr/local/bin/kubectl-sysdig_capture
+/usr/local/bin/kubectl-capture
 ```
 
 In this case is installed into /usr/local/bin, but will work with another
@@ -30,14 +30,14 @@ location listed in PATH.
 Once you have the `kubectl` plugin installed, you can start taking captures:
 
 ```bash
-$ kubectl sysdig-capture nginx-78f5d695bd-bcbd8
+$ kubectl capture nginx-78f5d695bd-bcbd8
 Sysdig is starting to capture system calls. See details below:
 
 Node: gke-sysdig-work-default-pool-c2d817f5-ggwv
 Pod: nginx-78f5d695bd-bcbd8
 Duration: 120 seconds
 
-Your capture is now available at sysdig-capture-1550080529-nginx-78f5d695bd-bcbd8.scap.gz
+Your capture is now available at capture-1550080529-nginx-78f5d695bd-bcbd8.scap.gz
 ```
 
 And then, you can start troubleshooting with [Sysdig Inspect](https://sysdig.com/opensource/inspect/).
@@ -64,5 +64,5 @@ You can uninstall this plugin from `kubectl` by simply removing it from your
 PATH:
 
 ```bash
-$ rm /usr/local/bin/kubectl-sysdig_capture
+$ rm /usr/local/bin/kubectl-capture
 ```
