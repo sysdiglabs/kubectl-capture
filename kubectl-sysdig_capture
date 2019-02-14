@@ -75,7 +75,11 @@ metadata:
 spec:
   containers:
   - name: capturer
-    image: sysdig/capture-and-sleep
+    image: sysdig/sysdig
+    args:
+      - /bin/bash
+      - "-c"
+      - "echo '* Capturing system calls'; sysdig -S -M ${duration} -pk -z -w /${capture_pod}.scap.gz; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait $!"
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
@@ -86,11 +90,6 @@ spec:
       limits:
         cpu: 100m
         memory: 128Mi
-    env:
-    - name: CAPTURE_DURATION
-      value: "${duration}"
-    - name: CAPTURE_FILE_NAME
-      value: ${capture_pod}
     volumeMounts:
     - mountPath: /host/var/run/docker.sock
       name: docker-socket
@@ -147,12 +146,12 @@ EOF
 
   sleep ${duration}
   while [[ ! -e .finished ]]; do
-    kubectl cp ${capture_pod}:/captures/.finished .finished > /dev/null 2>&1
+    kubectl cp ${capture_pod}:/.finished .finished > /dev/null 2>&1
     sleep 20
   done
   rm .finished
 
-  kubectl cp ${capture_pod}:/captures/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
+  kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
   kubectl delete pod ${capture_pod} > /dev/null 2>&1
   echo "Your capture is now available at ${capture_pod}.scap.gz"
 }
