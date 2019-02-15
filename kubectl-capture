@@ -148,17 +148,21 @@ EOF
   echo "Parameters for Sysdig: ${sysdig_params}"
   echo ""
 
-  sleep ${duration}
-  while [[ ! -e .finished ]]; do
-    kubectl cp ${capture_pod}:/.finished .finished > /dev/null 2>&1
-    sleep 20
-  done
-  rm .finished
+  wait_until_finished
 
   kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
   kubectl delete pod ${capture_pod} > /dev/null 2>&1
   echo "The capture has been downloaded to your hard disk at:"
   echo "${PWD}/${capture_pod}.scap.gz"
+}
+
+function wait_until_finished() {
+  sleep ${duration}
+  while [[ ! -e .finished ]]; do
+    kubectl cp ${capture_pod}:/.finished .finished > /dev/null 2>&1
+    sleep 15
+  done
+  rm .finished
 }
 
 main "$@"
