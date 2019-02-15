@@ -31,13 +31,15 @@ Once you have the `kubectl` plugin installed, you can start taking captures:
 
 ```bash
 $ kubectl capture nginx-78f5d695bd-bcbd8
-Sysdig is starting to capture system calls. See details below:
+Sysdig is starting to capture system calls:
 
-Node: gke-sysdig-work-default-pool-c2d817f5-ggwv
+Node: gke-sysdig-work-default-pool-e35da3a1-m8vp
 Pod: nginx-78f5d695bd-bcbd8
-Duration: 120 seconds
+Duration: 30 seconds
+Parameters for Sysdig: -S -M 30 -pk -z -w /capture-nginx-78f5d695bd-bcbd8-1550246926.scap.gz
 
-Your capture is now available at capture-1550080529-nginx-78f5d695bd-bcbd8.scap.gz
+The capture has been downloaded to your hard disk at:
+~/captures/capture-nginx-78f5d695bd-bcbd8-1550246926.scap.gz
 ```
 
 And then, you can start troubleshooting with [Sysdig Inspect](https://sysdig.com/opensource/inspect/).
@@ -53,10 +55,14 @@ to capture.
 
 There are a few parameters for this plugin:
 
-| Flag                  | Description                                                   |
-|-----------------------|---------------------------------------------------------------|
-| `-d` or `--duration`  | The duration in seconds that Sysdig is capturing system calls |
-| `-n` or `--namespace` | The namespace scope of the target Pod                         |
+| Flag                   | Description                           |
+|------------------------|---------------------------------------|
+| `-ns` or `--namespace` | The namespace scope of the target Pod |
+
+
+Aditionally, all the flags for the `sysdig` cli tool are supported. You can
+check more of these parameters in its
+[documentation](https://github.com/draios/sysdig/wiki).
 
 ## Cleanup
 
