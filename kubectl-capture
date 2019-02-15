@@ -7,6 +7,9 @@
 pod=""
 namespace="default"
 duration="120"
+now=$(date +%s)
+capture_pod=""
+sysdig_params=""
 
 function main() {
   parse_arguments "$@"
@@ -14,56 +17,56 @@ function main() {
 }
 
 function parse_arguments() {
-  local params=""
+  pod="$1"
+  shift
+
   while [ $# -gt 0 ]
   do
     case $1 in
-      -d|--duration)
+      -ns|--namespace)
+        namespace=$2
+        shift
+        ;;
+      -M)
         duration=$2
         shift
         ;;
-      -n|--namespace)
-        namespace=$2
-        shift
+      -w|--write=*|-z|--compress|-pc|-pk|-pm|-print=*|-S|--summary)
+        # Do not allow changes on these parameters
+        echo $0: $1: skipping parameter for Sysdig>&2
         ;;
       --)
         shift
         break
         ;;
-      -*)
-        echo $0: $1: unrecognized option >&2
-        ;;
       *)
-        params="$params $1"
+        sysdig_params="${sysdig_params} $1"
         ;;
     esac
     shift
   done
 
-  eval set -- "$params"
-  pod="${1}"
-
   if [[ -z "${pod}" ]]; then
     usage_and_die 1
   fi
+
+  capture_pod="capture-${pod}-${now}"
+  sysdig_params="-S -M ${duration} -pk -z -w /${capture_pod}.scap.gz ${sysdig_params}"
 }
 
 function usage_and_die() {
   cat << 'EOF'
-Usage: kubectl capture pod_name
+Usage: kubectl capture POD [-ns NAMESPACE] [sysdig options]
 Options:
-  -d | --duration     Capture system calls for this duration (default: 120 seconds)
-  -n | --namespace    The namespace where the target pod lives (default: default)
+  -ns | --namespace   The namespace where the target pod lives (default: default)
 EOF
   exit $1
 }
 
 function start_capture() {
-  local now=$(date +%s)
-  local capture_pod="capture-${pod}-${now}"
-
   node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
   if [[ $? -ne 0 ]];then
+    echo "error: Unable to trigger a capture on pod ${pod}"
     exit 1
   fi
 
@@ -79,7 +82,7 @@ spec:
     args:
       - /bin/bash
       - "-c"
-      - "echo '* Capturing system calls'; sysdig -S -M ${duration} -pk -z -w /${capture_pod}.scap.gz; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait $!"
+      - "echo '* Capturing system calls'; sysdig ${sysdig_params}; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait $!"
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
@@ -142,6 +145,7 @@ EOF
   echo "Node: ${node}"
   echo "Pod: ${pod}"
   echo "Duration: ${duration} seconds"
+  echo "Parameters for Sysdig: ${sysdig_params}"
   echo ""
 
   sleep ${duration}

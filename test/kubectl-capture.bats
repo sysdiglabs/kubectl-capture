@@ -4,7 +4,7 @@
   kubectl create deployment nginx --image=nginx
   POD=$(kubectl get pod | grep nginx | cut -f1 -d" ")
 
-  run ./kubectl-capture $POD -d 5
+  run ./kubectl-capture $POD -M 5
 
   kubectl delete deployment nginx
 
@@ -16,7 +16,7 @@
   kubectl -n scope create deployment nginx --image=nginx
   POD=$(kubectl -n scope get pod | grep nginx | cut -f1 -d" ")
 
-  run ./kubectl-capture $POD -d 5 -n scope
+  run ./kubectl-capture $POD -M 5 -ns scope
 
   kubectl delete namespace scope
 
