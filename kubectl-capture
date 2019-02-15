@@ -167,4 +167,15 @@ function wait_until_finished() {
   rm .finished
 }
 
+trap delete_capture_pod INT
+
+function delete_capture_pod() {
+  if [[ -n "${capture_pod}" ]]; then
+    echo ""
+    echo "Please wait until capture pod is deleted"
+    kubectl delete pod ${capture_pod} > /dev/null 2>&1
+  fi
+  exit 0
+}
+
 main "$@"
