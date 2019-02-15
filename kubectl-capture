@@ -157,7 +157,7 @@ EOF
 }
 
 function wait_until_finished() {
-  local time_spent_building_sysdig_module = 60
+  local time_spent_building_sysdig_module=60
   sleep ${capture_duration}
   sleep ${time_spent_building_sysdig_module}
   while [[ ! -e .finished ]]; do
