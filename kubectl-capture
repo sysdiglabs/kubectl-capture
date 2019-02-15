@@ -137,7 +137,7 @@ EOF
   kubectl apply -f capture-pod.yaml > /dev/null 2>&1
   rm capture-pod.yaml
 
-  echo "Sysdig is starting to capture system calls. See details below:"
+  echo "Sysdig is starting to capture system calls:"
   echo ""
   echo "Node: ${node}"
   echo "Pod: ${pod}"
@@ -153,7 +153,8 @@ EOF
 
   kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
   kubectl delete pod ${capture_pod} > /dev/null 2>&1
-  echo "Your capture is now available at ${capture_pod}.scap.gz"
+  echo "The capture has been downloaded to your hard disk at:"
+  echo "${PWD}/${capture_pod}.scap.gz"
 }
 
 main "$@"
