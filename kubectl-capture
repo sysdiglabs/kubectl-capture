@@ -60,7 +60,7 @@ EOF
 
 function start_capture() {
   local now=$(date +%s)
-  local capture_pod="capture-${now}-${pod}"
+  local capture_pod="capture-${pod}-${now}"
 
   node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
   if [[ $? -ne 0 ]];then
