@@ -6,7 +6,7 @@
 
 pod=""
 namespace="default"
-duration="120"
+capture_duration="120"
 now=$(date +%s)
 capture_pod=""
 sysdig_params=""
@@ -28,7 +28,7 @@ function parse_arguments() {
         shift
         ;;
       -M)
-        duration=$2
+        capture_duration=$2
         shift
         ;;
       -w|--write=*|-z|--compress|-pc|-pk|-pm|-print=*|-S|--summary)
@@ -51,7 +51,7 @@ function parse_arguments() {
   fi
 
   capture_pod="capture-${pod}-${now}"
-  sysdig_params="-S -M ${duration} -pk -z -w /${capture_pod}.scap.gz ${sysdig_params}"
+  sysdig_params="-S -M ${capture_duration} -pk -z -w /${capture_pod}.scap.gz ${sysdig_params}"
 }
 
 function usage_and_die() {
@@ -144,7 +144,7 @@ EOF
   echo ""
   echo "Node: ${node}"
   echo "Pod: ${pod}"
-  echo "Duration: ${duration} seconds"
+  echo "Duration: ${capture_duration} seconds"
   echo "Parameters for Sysdig: ${sysdig_params}"
   echo ""
 
@@ -157,7 +157,9 @@ EOF
 }
 
 function wait_until_finished() {
-  sleep ${duration}
+  local time_spent_building_sysdig_module = 60
+  sleep ${capture_duration}
+  sleep ${time_spent_building_sysdig_module}
   while [[ ! -e .finished ]]; do
     kubectl cp ${capture_pod}:/.finished .finished > /dev/null 2>&1
     sleep 5
