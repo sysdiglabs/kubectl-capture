@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# A kubectl plugin which starts a capture for a duration and uploads to a S3
-# bucket when is finished to troubleshoot it later with Sysdig Inspect
+# A kubectl plugin which starts a capture for a duration and downloads to your
+# hard drive to use for troubleshooting with Sysdig Inspect
 
 
 pod=""
