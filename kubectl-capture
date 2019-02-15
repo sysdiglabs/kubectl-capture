@@ -160,7 +160,7 @@ function wait_until_finished() {
   sleep ${duration}
   while [[ ! -e .finished ]]; do
     kubectl cp ${capture_pod}:/.finished .finished > /dev/null 2>&1
-    sleep 15
+    sleep 5
   done
   rm .finished
 }
