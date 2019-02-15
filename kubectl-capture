@@ -82,7 +82,7 @@ spec:
     args:
       - /bin/bash
       - "-c"
-      - "echo '* Capturing system calls'; sysdig ${sysdig_params}; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait $!"
+      - "echo '* Capturing system calls'; sysdig ${sysdig_params}; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait \$!"
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
