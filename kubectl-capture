@@ -34,7 +34,6 @@ function parse_arguments() {
         ;;
       --ebpf)
         ebpf="1"
-        shift
         ;;
       -w|--write=*|-z|--compress|-pc|-pk|-pm|-print=*|-S|--summary)
         # Do not allow changes on these parameters
