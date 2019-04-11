@@ -10,6 +10,7 @@ capture_duration="120"
 now=$(date +%s)
 capture_pod=""
 sysdig_params=""
+ebpf="0"
 
 function main() {
   parse_arguments "$@"
@@ -29,6 +30,10 @@ function parse_arguments() {
         ;;
       -M)
         capture_duration=$2
+        shift
+        ;;
+      --ebpf)
+        ebpf="1"
         shift
         ;;
       -w|--write=*|-z|--compress|-pc|-pk|-pm|-print=*|-S|--summary)
@@ -59,6 +64,7 @@ function usage_and_die() {
 Usage: kubectl capture POD [-ns NAMESPACE] [sysdig options]
 Options:
   -ns | --namespace   The namespace where the target pod lives (default: default)
+  --ebpf              Launch capture pod with eBPF probe instead of kernel module
 EOF
   exit $1
 }
@@ -70,6 +76,32 @@ function start_capture() {
     exit 1
   fi
 
+  if [[ "${ebpf}" -eq "1" ]];then
+    build_capture_pod_for_ebpf
+  else
+    build_capture_pod
+  fi
+
+  kubectl apply -f capture-pod.yaml > /dev/null 2>&1
+  rm capture-pod.yaml
+
+  echo "Sysdig is starting to capture system calls:"
+  echo ""
+  echo "Node: ${node}"
+  echo "Pod: ${pod}"
+  echo "Duration: ${capture_duration} seconds"
+  echo "Parameters for Sysdig: ${sysdig_params}"
+  echo ""
+
+  wait_until_finished
+
+  kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
+  kubectl delete pod ${capture_pod} > /dev/null 2>&1
+  echo "The capture has been downloaded to your hard disk at:"
+  echo "${PWD}/${capture_pod}.scap.gz"
+}
+
+function build_capture_pod() {
   cat << EOF > capture-pod.yaml
 apiVersion: v1
 kind: Pod
@@ -136,24 +168,85 @@ spec:
       path: /usr
   nodeName: ${node}
 EOF
+}
 
-  kubectl apply -f capture-pod.yaml > /dev/null 2>&1
-  rm capture-pod.yaml
-
-  echo "Sysdig is starting to capture system calls:"
-  echo ""
-  echo "Node: ${node}"
-  echo "Pod: ${pod}"
-  echo "Duration: ${capture_duration} seconds"
-  echo "Parameters for Sysdig: ${sysdig_params}"
-  echo ""
-
-  wait_until_finished
-
-  kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
-  kubectl delete pod ${capture_pod} > /dev/null 2>&1
-  echo "The capture has been downloaded to your hard disk at:"
-  echo "${PWD}/${capture_pod}.scap.gz"
+function build_capture_pod_for_ebpf() {
+  cat << EOF > capture-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "${capture_pod}"
+spec:
+  hostNetwork: true
+  containers:
+  - name: capturer
+    image: sysdig/sysdig
+    args:
+      - /bin/bash
+      - "-c"
+      - "echo '* Capturing system calls'; sysdig ${sysdig_params}; touch /.finished; trap 'exit 0' TERM; sleep infinity & wait \$!"
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    env:
+      - name: SYSDIG_BPF_PROBE
+        value:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    volumeMounts:
+    - mountPath: /host/var/run/docker.sock
+      name: docker-socket
+    - mountPath: /host/dev
+      name: dev-fs
+    - mountPath: /host/proc
+      name: proc-fs
+      readOnly: true
+    - mountPath: /host/boot
+      name: boot-fs
+      readOnly: true
+    - mountPath: /host/lib/modules
+      name: lib-modules
+      readOnly: true
+    - mountPath: /host/usr
+      name: usr-fs
+      readOnly: true
+    - mountPath: /dev/shm
+      name: dshm
+    - mountPath: /host/etc
+      name: etc-fs
+      readOnly: true
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+  - name: docker-socket
+    hostPath:
+      path: /var/run/docker.sock
+  - name: dev-fs
+    hostPath:
+      path: /dev
+  - name: proc-fs
+    hostPath:
+      path: /proc
+  - name: boot-fs
+    hostPath:
+      path: /boot
+  - name: lib-modules
+    hostPath:
+      path: /lib/modules
+  - name: usr-fs
+    hostPath:
+      path: /usr
+  - name: etc-fs
+    hostPath:
+      path: /etc
+  nodeName: ${node}
+EOF
 }
 
 function wait_until_finished() {

@@ -11,6 +11,17 @@
   [ "$status" -eq 0 ]
 }
 
+@test "it does a capture using ebpf" {
+  kubectl create deployment nginx --image=nginx
+  POD=$(kubectl get pod | grep nginx | cut -f1 -d" ")
+
+  run ./kubectl-capture $POD --ebpf -M 5
+
+  kubectl delete deployment nginx
+
+  [ "$status" -eq 0 ]
+}
+
 @test "when pod is inside a namespace it does a capture" {
   kubectl create namespace scope
   kubectl -n scope create deployment nginx --image=nginx
