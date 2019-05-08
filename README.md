@@ -55,9 +55,10 @@ to capture.
 
 There are a few parameters for this plugin:
 
-| Flag                   | Description                           |
-|------------------------|---------------------------------------|
-| `-ns` or `--namespace` | The namespace scope of the target Pod |
+| Flag                   | Description                                                    |
+|------------------------|----------------------------------------------------------------|
+| `-ns` or `--namespace` | The namespace scope of the target Pod                          |
+| `--ebpf`               | Use eBPF probe instead of kernel module for capturing syscalls |
 
 
 Aditionally, all the flags for the `sysdig` cli tool are supported. You can
