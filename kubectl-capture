@@ -11,6 +11,7 @@ now=$(date +%s)
 capture_pod=""
 sysdig_params=""
 ebpf="0"
+verborse="0"
 
 function main() {
   parse_arguments "$@"
@@ -34,6 +35,9 @@ function parse_arguments() {
         ;;
       --ebpf)
         ebpf="1"
+        ;;
+      -v)
+        verbose="1"
         ;;
       -w|--write=*|-z|--compress|-pc|-pk|-pm|-print=*|-S|--summary)
         # Do not allow changes on these parameters
@@ -64,12 +68,18 @@ Usage: kubectl capture POD [-ns NAMESPACE] [sysdig options]
 Options:
   -ns | --namespace   The namespace where the target pod lives (default: default)
   --ebpf              Launch capture pod with eBPF probe instead of kernel module
+  -v                  Set verbose option to follow the whole process
 EOF
   exit $1
 }
 
 function start_capture() {
-  node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
+  if [[ "${verbose}" -eq "1" ]];then
+    node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}' 2>/dev/null)
+  else
+    node=$(kubectl -n ${namespace} get pod ${pod} -o jsonpath='{.spec.nodeName}')
+  fi
+
   if [[ $? -ne 0 ]];then
     echo "error: Unable to trigger a capture on pod ${pod}"
     exit 1
@@ -81,7 +91,12 @@ function start_capture() {
     build_capture_pod
   fi
 
-  kubectl apply -f capture-pod.yaml > /dev/null 2>&1
+  if [[ "${verbose}" -eq "1" ]];then
+    kubectl apply -f capture-pod.yaml
+  else
+    kubectl apply -f capture-pod.yaml > /dev/null 2>&1
+  fi
+
   rm capture-pod.yaml
 
   echo "Sysdig is starting to capture system calls:"
@@ -94,10 +109,22 @@ function start_capture() {
 
   wait_until_finished
 
-  kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
-  kubectl delete pod ${capture_pod} > /dev/null 2>&1
-  echo "The capture has been downloaded to your hard disk at:"
-  echo "${PWD}/${capture_pod}.scap.gz"
+
+  if [[ "${verbose}" -eq "1" ]];then
+    kubectl logs ${capture_pod}
+    kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz
+    kubectl delete pod ${capture_pod}
+  else
+    kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
+    kubectl delete pod ${capture_pod} > /dev/null 2>&1
+  fi
+
+  if [[ -f "${PWD}/${capture_pod}.scap.gz" ]]; then
+    echo "The capture has been downloaded to your hard disk at:"
+    echo "${PWD}/${capture_pod}.scap.gz"
+  else
+    echo "Error capturing, file not created. Try with the verbose option(-v) to have get more info."
+  fi
 }
 
 function build_capture_pod() {
@@ -265,7 +292,13 @@ function delete_capture_pod() {
   if [[ -n "${capture_pod}" ]]; then
     echo ""
     echo "Please wait until capture pod is deleted"
-    kubectl delete pod ${capture_pod} > /dev/null 2>&1
+
+    if [[ "${verbose}" -eq "1" ]];then
+      kubectl delete pod ${capture_pod}
+    else
+      kubectl delete pod ${capture_pod} > /dev/null 2>&1
+    fi
+
   fi
   exit 0
 }
