@@ -10,10 +10,12 @@ duration of time and is download locally in order to use it with
 
 ## Installing
 
-In order to use this plugin, just copy the `kubectl-capture` to your
-PATH, and ensure it has execution permissions.
+In order to use this plugin you need to add the latest release to your PATH.
+1. Download and unpack the latest release.
+2. Locate the folder in your file system using your terminal, eg `cd ~/Downloads/kubectl-capture.v0.1.0`
+3. Move `kubectl-capture` to somewhere in your PATH, e.g. `mv kubectl-capture /usr/local/bin`
 
-You can verify its installation using `kubectl`:
+You can verify the installation using `kubectl plugin list`:
 
 ```bash
 $ kubectl plugin list
