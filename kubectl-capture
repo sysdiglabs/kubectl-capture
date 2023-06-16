@@ -96,7 +96,7 @@ function start_capture() {
 
   kubectl cp ${capture_pod}:/${capture_pod}.scap.gz ${capture_pod}.scap.gz > /dev/null 2>&1
   kubectl delete pod ${capture_pod} > /dev/null 2>&1
-  echo "The capture has been downloaded to your hard disk at:"
+  echo "The capture has been downloaded to your filesystem as:"
   echo "${PWD}/${capture_pod}.scap.gz"
 }
 
